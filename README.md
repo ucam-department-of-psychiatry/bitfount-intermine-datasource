@@ -7,7 +7,7 @@ Bitfount Datasource for access to Intermine instance
 ```
 pip install bitfount intermine
 mkdir -p ~/.bitfount/_plugins/datasources
-ln -s` bitfount-intermine-datasource/intermine_source.py ~/.bitfount/plugins/datasources/intermine_source.py
+ln -s bitfount-intermine-datasource/intermine_source.py ~/.bitfount/plugins/datasources/intermine_source.py
 ```
 
 * Example code is in ```pod_example.py```
