@@ -198,6 +198,13 @@ class IntermineSource(MultiTableSource):
         if table_name:
             self._validate_table_name(table_name)
             data = self._template_to_df(table_name)
+
+        if data is not None and data.empty:
+            # Otherwise we get a more cryptic
+            # "One of `datasource` and `datasources` must be specified" from
+            # federated/pod.py
+            raise ValueError("Empty dataset")
+
         return data
 
     def get_dtypes(self, table_name: Optional[str] = None, **kwargs: Any) -> _Dtypes:
