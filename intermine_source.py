@@ -53,12 +53,20 @@ class IntermineSource(MultiTableSource):
     :::
     """
 
-    def __init__(self, service_url: str, token: Optional[str], **kwargs: Any) -> None:
+    def __init__(
+        self,
+        service_url: str,
+        token: Optional[str] = None,
+        template_name: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         self.service = Service(service_url, token=token)
         self.all_templates_names: Dict[
             str, List[str]
         ] = self.service.all_templates_names
+        self.template_name = template_name
+
         self.template_to_user_map = {
             t: user
             for user, tables in self.service.all_templates_names.items()
@@ -80,6 +88,14 @@ class IntermineSource(MultiTableSource):
     @property
     def table_names(self) -> List[str]:
         """The names of the tables accessible from this data source."""
+
+        if self.template_name is not None:
+            return [self.template_name]
+
+        return self.template_names
+
+    @property
+    def template_names(self) -> List[str]:
         return list(itertools.chain(*self.all_templates_names.values()))
 
     def _validate_table_name(self, table_name: Optional[str] = None) -> None:
@@ -97,10 +113,10 @@ class IntermineSource(MultiTableSource):
             raise ValueError("No table name provided for Intermine service.")
         elif not self.table_names:
             raise ValueError(f"Service {self.service} did not return any templates.")
-        elif table_name not in self.table_names:
+        elif table_name not in self.template_names:
             raise ValueError(
                 f"Template name {table_name} not found in service: {self.service}. "
-                f"Available tables: {self.table_names}"
+                f"Available tables: {self.template_names}"
             )
 
     def get_values(
@@ -176,6 +192,9 @@ class IntermineSource(MultiTableSource):
             A DataFrame-type object which contains the data.
         """
         data: Optional[pd.DataFrame] = None
+        if not self.multi_table:
+            table_name = self.table_names[0]
+
         if table_name:
             self._validate_table_name(table_name)
             data = self._template_to_df(table_name)
@@ -205,13 +224,23 @@ class IntermineSource(MultiTableSource):
         return dtypes
 
     def __len__(self) -> int:
-        """Intemine template length."""
-        return len(self.data)
+        if self._data_is_loaded:
+            return len(self.data)
+        elif not self.multi_table:
+            data = self.get_data()
+            assert data is not None
+            self.data = data
+            return len(self.data)
+
+        raise ValueError("Can't ascertain length of multi-table Intermine dataset.")
 
     @property
     def multi_table(self) -> bool:
         """Attribute to specify whether the datasource is multi table."""
-        if len(self.table_names) > 1:
-            return True
-        else:
-            return False
+        return len(self.table_names) > 1
+
+    def get_column_names(
+        self, table_name: Optional[str] = None, **kwargs: Any
+    ) -> Iterable[str]:
+
+        return self.get_dtypes(table_name).keys()
