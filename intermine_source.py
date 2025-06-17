@@ -196,6 +196,8 @@ class IntermineSource(MultiTableSource):
             table_name = self.table_names[0]
 
         if table_name:
+            # In this case table_name is NOT a table name and is instead the
+            # data source name
             self._validate_table_name(table_name)
             data = self._template_to_df(table_name)
 
@@ -217,6 +219,12 @@ class IntermineSource(MultiTableSource):
         Returns:
             A mapping from column names to column types.
         """
+
+        if not self.multi_table:
+            # In this case table_name is NOT a table name and is instead the
+            # data source name
+            table_name = self.table_names[0]
+
         self._validate_table_name(table_name)
         user = self.template_to_user_map[table_name]
         template = self.service.get_template_by_user(table_name, user)
